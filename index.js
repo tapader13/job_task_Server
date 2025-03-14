@@ -29,6 +29,46 @@ async function run() {
     console.log(
       'Pinged your deployment. You successfully connected to MongoDB!'
     );
+    const couponDB = client.db('couponDB');
+    const couponCollection = microDB.collection('coupons');
+
+    // Claim Coupon
+    app.post('/claim', async (req, res) => {
+      const { ip } = req.body;
+
+      // Abuse Prevention: Check IP and Session
+      const recentClaim = await couponCollection.findOne(
+        { claimedBy: ip },
+        { sort: { _id: -1 } }
+      );
+      if (
+        recentClaim &&
+        Date.now() - recentClaim._id.getTimestamp() < 24 * 60 * 60 * 1000
+      ) {
+        return res
+          .status(400)
+          .json({ message: 'You can only claim one coupon per day.' });
+      }
+
+      // Find the next available coupon
+      const coupon = await couponCollection.findOne({
+        isClaimed: false,
+        isActive: true,
+      });
+      if (!coupon)
+        return res.status(404).json({ message: 'No coupons available.' });
+
+      // Assign coupon
+      await couponCollection.updateOne(
+        { _id: coupon._id },
+        { $set: { claimedBy: ip, isClaimed: true } }
+      );
+      console.log(coupon, 'coupon updated');
+      res.json({
+        message: 'Coupon claimed successfully!',
+        coupon: coupon.code,
+      });
+    });
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
@@ -51,41 +91,6 @@ function authenticateAdmin(req, res, next) {
 }
 
 // Routes
-
-// Claim Coupon
-app.post('/claim', async (req, res) => {
-  const { ip, sessionId } = req.body;
-
-  // Abuse Prevention: Check IP and Session
-  const recentClaim = await db
-    .collection('coupons')
-    .findOne({ claimedBy: ip }, { sort: { _id: -1 } });
-  if (
-    recentClaim &&
-    Date.now() - recentClaim._id.getTimestamp() < 24 * 60 * 60 * 1000
-  ) {
-    return res
-      .status(400)
-      .json({ message: 'You can only claim one coupon per day.' });
-  }
-
-  // Find the next available coupon
-  const coupon = await db
-    .collection('coupons')
-    .findOne({ isClaimed: false, isActive: true });
-  if (!coupon)
-    return res.status(404).json({ message: 'No coupons available.' });
-
-  // Assign coupon
-  await db
-    .collection('coupons')
-    .updateOne(
-      { _id: coupon._id },
-      { $set: { claimedBy: ip, isClaimed: true } }
-    );
-
-  res.json({ message: 'Coupon claimed successfully!', coupon: coupon.code });
-});
 
 // Admin Login
 // app.post('/admin/login', async (req, res) => {
