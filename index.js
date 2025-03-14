@@ -30,12 +30,13 @@ async function run() {
       'Pinged your deployment. You successfully connected to MongoDB!'
     );
     const couponDB = client.db('couponDB');
-    const couponCollection = microDB.collection('coupons');
+    const couponCollection = couponDB.collection('coupons');
+    const userCollection = couponDB.collection('users');
 
     // Claim Coupon
     app.post('/claim', async (req, res) => {
       const { ip } = req.body;
-
+      console.log(ip, 'claim');
       // Abuse Prevention: Check IP and Session
       const recentClaim = await couponCollection.findOne(
         { claimedBy: ip },
@@ -69,6 +70,21 @@ async function run() {
         coupon: coupon.code,
       });
     });
+
+    // Admin Login
+    app.post('/admin/login', async (req, res) => {
+      const { username, password } = req.body;
+      console.log(username, password);
+      const admin = await userCollection.findOne({ username });
+      if (!admin) return res.status(400).json({ message: 'Admin not found.' });
+
+      const validPass = await bcrypt.compare(password, admin.password);
+      if (!validPass)
+        return res.status(400).json({ message: 'Invalid password.' });
+
+      const token = jwt.sign({ _id: admin._id }, 'secretkey');
+      res.header('Authorization', token).json({ token });
+    });
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
@@ -91,20 +107,6 @@ function authenticateAdmin(req, res, next) {
 }
 
 // Routes
-
-// Admin Login
-// app.post('/admin/login', async (req, res) => {
-//   const { username, password } = req.body;
-
-//   const admin = await db.collection('admins').findOne({ username });
-//   if (!admin) return res.status(400).json({ message: 'Admin not found.' });
-
-//   const validPass = await bcrypt.compare(password, admin.password);
-//   if (!validPass) return res.status(400).json({ message: 'Invalid password.' });
-
-//   const token = jwt.sign({ _id: admin._id }, 'secretkey');
-//   res.header('Authorization', token).json({ token });
-// });
 
 // Admin Routes (Protected)
 
