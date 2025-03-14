@@ -85,6 +85,12 @@ async function run() {
       const token = jwt.sign({ _id: admin._id }, 'secretkey');
       res.header('Authorization', token).json({ token });
     });
+
+    // View Coupons
+    app.get('/admin/coupons', async (req, res) => {
+      const coupons = await couponCollection.find().toArray();
+      res.json(coupons);
+    });
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
@@ -109,12 +115,6 @@ function authenticateAdmin(req, res, next) {
 // Routes
 
 // Admin Routes (Protected)
-
-// View Coupons
-// app.get('/admin/coupons', authenticateAdmin, async (req, res) => {
-//   const coupons = await db.collection('coupons').find().toArray();
-//   res.json(coupons);
-// });
 
 // Add Coupon
 // app.post('/admin/coupons', authenticateAdmin, async (req, res) => {
