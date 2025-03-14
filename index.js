@@ -92,6 +92,32 @@ async function run() {
       res.json(coupons);
     });
 
+    // View history
+    app.get('/admin/history', async (req, res) => {
+      const history = await couponCollection
+        .aggregate([
+          {
+            $match: { claimedBy: { $ne: null } },
+          },
+          {
+            $group: {
+              _id: '$claimedBy',
+              coupons: { $push: '$$ROOT' },
+            },
+          },
+          {
+            $project: {
+              _id: 1,
+
+              coupons: 1,
+            },
+          },
+        ])
+        .toArray();
+      console.log(history);
+      res.json(history);
+    });
+
     // Add Coupon
     app.post('/admin/coupons', async (req, res) => {
       const { code, isClame, isActive } = req.body;
@@ -106,6 +132,7 @@ async function run() {
     // Update Coupon
     app.put('/admin/coupons/:id', async (req, res) => {
       const { isActive, isClame, code } = req.body;
+      console.log(req.params.id, 123);
       await couponCollection.updateOne(
         { _id: new ObjectId(req.params.id) },
         { $set: { isActive, isClame, code } }
