@@ -53,7 +53,7 @@ async function run() {
 
       // Find the next available coupon
       const coupon = await couponCollection.findOne({
-        isClaimed: false,
+        isClame: false,
         isActive: true,
       });
       if (!coupon)
@@ -91,6 +91,27 @@ async function run() {
       const coupons = await couponCollection.find().toArray();
       res.json(coupons);
     });
+
+    // Add Coupon
+    app.post('/admin/coupons', async (req, res) => {
+      const { code, isClame, isActive } = req.body;
+      await couponCollection.insertOne({
+        code,
+        isClame,
+        isActive,
+      });
+      res.json({ message: 'Coupon added successfully!' });
+    });
+
+    // Update Coupon
+    app.put('/admin/coupons/:id', async (req, res) => {
+      const { isActive, isClame, code } = req.body;
+      await couponCollection.updateOne(
+        { _id: new ObjectId(req.params.id) },
+        { $set: { isActive, isClame, code } }
+      );
+      res.json({ message: 'Coupon updated successfully!' });
+    });
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
@@ -115,24 +136,6 @@ function authenticateAdmin(req, res, next) {
 // Routes
 
 // Admin Routes (Protected)
-
-// Add Coupon
-// app.post('/admin/coupons', authenticateAdmin, async (req, res) => {
-//   const { code } = req.body;
-//   await db
-//     .collection('coupons')
-//     .insertOne({ code, isClaimed: false, isActive: true });
-//   res.json({ message: 'Coupon added successfully!' });
-// });
-
-// Update Coupon
-// app.put('/admin/coupons/:id', authenticateAdmin, async (req, res) => {
-//   const { isActive } = req.body;
-//   await db
-//     .collection('coupons')
-//     .updateOne({ _id: ObjectId(req.params.id) }, { $set: { isActive } });
-//   res.json({ message: 'Coupon updated successfully!' });
-// });
 
 // Start Server
 const PORT = 5000;
