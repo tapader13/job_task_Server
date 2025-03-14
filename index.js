@@ -112,6 +112,17 @@ async function run() {
       );
       res.json({ message: 'Coupon updated successfully!' });
     });
+
+    // Update Available Coupons
+    app.patch('/admin/coupons/:id', async (req, res) => {
+      const { isActive } = req.body;
+      console.log(req.params.id);
+      await couponCollection.updateOne(
+        { _id: new ObjectId(req.params.id) },
+        { $set: { isActive } }
+      );
+      res.json({ message: 'Coupon updated successfully!' });
+    });
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
@@ -132,10 +143,6 @@ function authenticateAdmin(req, res, next) {
     res.status(400).json({ message: 'Invalid Token' });
   }
 }
-
-// Routes
-
-// Admin Routes (Protected)
 
 // Start Server
 const PORT = 5000;
