@@ -42,9 +42,9 @@ async function run() {
     // Claim Coupon
     app.post('/claim', async (req, res) => {
       const { ip } = req.body;
-      console.log(ip, 'claim');
+      // console.log(ip, 'claim');
       const lastClaimTime = req.cookies.lastClaimTime;
-      console.log(lastClaimTime);
+      // console.log(lastClaimTime);
       if (lastClaimTime) {
         const elapsedTime = Date.now() - parseInt(lastClaimTime, 10);
         if (elapsedTime < 24 * 60 * 60 * 1000) {
@@ -58,13 +58,13 @@ async function run() {
         { claimedBy: ip, isClame: true },
         { sort: { _id: -1 } }
       );
-      console.log('recentClaim', recentClaim);
+      // console.log('recentClaim', recentClaim);
       if (recentClaim) {
         const claimTime = new Date(recentClaim.claimTime);
-        console.log('Previous claim time:', claimTime);
+        // console.log('Previous claim time:', claimTime);
 
         const timeSinceClaim = Date.now() - claimTime.getTime();
-        console.log('Time since last claim:', timeSinceClaim);
+        // console.log('Time since last claim:', timeSinceClaim);
 
         if (timeSinceClaim < 24 * 60 * 60 * 1000) {
           return res
@@ -93,7 +93,7 @@ async function run() {
         }
       );
 
-      console.log('Coupon successfully updated:', coupon);
+      // console.log('Coupon successfully updated:', coupon);
 
       res
         .cookie('lastClaimTime', Date.now(), {
@@ -110,7 +110,7 @@ async function run() {
     // Admin Login
     app.post('/admin/login', async (req, res) => {
       const { username, password } = req.body;
-      console.log(username, password);
+      // console.log(username, password);
       const admin = await userCollection.findOne({ username });
       if (!admin) return res.status(400).json({ message: 'Admin not found.' });
 
@@ -150,7 +150,7 @@ async function run() {
           },
         ])
         .toArray();
-      console.log(history);
+      // console.log(history);
       res.json(history);
     });
 
@@ -168,7 +168,7 @@ async function run() {
     // Update Coupon
     app.put('/admin/coupons/:id', async (req, res) => {
       const { isActive, isClame, code } = req.body;
-      console.log(req.params.id, 123);
+      // console.log(req.params.id, 123);
       await couponCollection.updateOne(
         { _id: new ObjectId(req.params.id) },
         { $set: { isActive, isClame, code } }
@@ -179,7 +179,7 @@ async function run() {
     // Update Available Coupons
     app.patch('/admin/coupons/:id', async (req, res) => {
       const { isActive } = req.body;
-      console.log(req.params.id);
+      // console.log(req.params.id);
       await couponCollection.updateOne(
         { _id: new ObjectId(req.params.id) },
         { $set: { isActive } }
