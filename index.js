@@ -10,7 +10,7 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(
   cors({
-    origin: 'http://localhost:5173',
+    origin: 'https://job-task-client-bc24f.firebaseapp.com',
     credentials: true,
   })
 );
