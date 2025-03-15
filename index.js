@@ -3,10 +3,16 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
-
+const cookieParser = require('cookie-parser');
 const app = express();
 app.use(express.json());
-app.use(cors());
+app.use(cookieParser());
+app.use(
+  cors({
+    origin: 'http://localhost:5173',
+    credentials: true,
+  })
+);
 
 // MongoDB Connection URL
 const uri =
@@ -37,38 +43,68 @@ async function run() {
     app.post('/claim', async (req, res) => {
       const { ip } = req.body;
       console.log(ip, 'claim');
-      // Abuse Prevention: Check IP and Session
-      const recentClaim = await couponCollection.findOne(
-        { claimedBy: ip },
-        { sort: { _id: -1 } }
-      );
-      if (
-        recentClaim &&
-        Date.now() - recentClaim._id.getTimestamp() < 24 * 60 * 60 * 1000
-      ) {
-        return res
-          .status(400)
-          .json({ message: 'You can only claim one coupon per day.' });
+      const lastClaimTime = req.cookies.lastClaimTime;
+      console.log(lastClaimTime);
+      if (lastClaimTime) {
+        const elapsedTime = Date.now() - parseInt(lastClaimTime, 10);
+        if (elapsedTime < 24 * 60 * 60 * 1000) {
+          return res
+            .status(400)
+            .json({ message: 'You can only claim one coupon per day.' });
+        }
       }
 
-      // Find the next available coupon
+      const recentClaim = await couponCollection.findOne(
+        { claimedBy: ip, isClame: true },
+        { sort: { _id: -1 } }
+      );
+      console.log('recentClaim', recentClaim);
+      if (recentClaim) {
+        const claimTime = new Date(recentClaim.claimTime);
+        console.log('Previous claim time:', claimTime);
+
+        const timeSinceClaim = Date.now() - claimTime.getTime();
+        console.log('Time since last claim:', timeSinceClaim);
+
+        if (timeSinceClaim < 24 * 60 * 60 * 1000) {
+          return res
+            .status(400)
+            .json({ message: 'You can only claim one coupon per day.' });
+        }
+      }
+
       const coupon = await couponCollection.findOne({
         isClame: false,
         isActive: true,
       });
-      if (!coupon)
-        return res.status(404).json({ message: 'No coupons available.' });
 
-      // Assign coupon
+      if (!coupon) {
+        return res.status(404).json({ message: 'No coupons available.' });
+      }
+
       await couponCollection.updateOne(
         { _id: coupon._id },
-        { $set: { claimedBy: ip, isClaimed: true } }
+        {
+          $set: {
+            claimedBy: ip,
+            isClame: true,
+            claimTime: new Date(),
+          },
+        }
       );
-      console.log(coupon, 'coupon updated');
-      res.json({
-        message: 'Coupon claimed successfully!',
-        coupon: coupon.code,
-      });
+
+      console.log('Coupon successfully updated:', coupon);
+
+      res
+        .cookie('lastClaimTime', Date.now(), {
+          httpOnly: true,
+          secure: false,
+          sameSite: 'strict',
+        })
+        .json({
+          message: 'Coupon claimed successfully!',
+          coupon: coupon.code,
+        });
     });
 
     // Admin Login
@@ -156,20 +192,6 @@ async function run() {
   }
 }
 run().catch(console.dir);
-
-// Middleware for Admin Authentication
-function authenticateAdmin(req, res, next) {
-  const token = req.header('Authorization');
-  if (!token) return res.status(401).json({ message: 'Access Denied' });
-
-  try {
-    const verified = jwt.verify(token, 'secretkey');
-    req.admin = verified;
-    next();
-  } catch (err) {
-    res.status(400).json({ message: 'Invalid Token' });
-  }
-}
 
 // Start Server
 const PORT = 5000;
