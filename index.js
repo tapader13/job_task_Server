@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const bcrypt = require('bcryptjs');
@@ -15,9 +16,8 @@ app.use(
 );
 
 // MongoDB Connection URL
-const uri =
-  'mongodb+srv://minhajtapader0:gPqGhQgHdoTjyayL@cluster0.aax42.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
-const client = new MongoClient(uri, {
+
+const client = new MongoClient(process.env.DB_URI, {
   serverApi: {
     version: ServerApiVersion.v1,
     strict: true,
@@ -194,5 +194,8 @@ async function run() {
 run().catch(console.dir);
 
 // Start Server
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
+app.get('/', (req, res) => {
+  res.send('Server is running');
+});
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
